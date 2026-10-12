@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(py -X utf8 scripts/search.py:*)",
+      "Bash(py -X utf8 scripts/show.py:*)",
+      "Bash(py -X utf8 scripts/jira_issue.py:*)",
+      "Bash(py -X utf8 scripts/sync.py:*)"
+    ]
+  }
+}

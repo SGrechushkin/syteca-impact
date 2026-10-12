@@ -1,0 +1,48 @@
+# Syteca impact → TestRail run
+
+User sends a Jira ticket (link/key) or impact text → pick TestRail cases that cover the impact and its surroundings → after user approval create a run.
+
+## Environment
+- TestRail: https://testrail.dev.local, project 9 "AI: CSM2" (single-suite), suite 13 "Master". Runs: index.php?/runs/overview/9
+- Jira: https://jira.dev.local/jira
+- Credentials (login + password) live in Windows Credential Manager (`syteca-testrail`, `syteca-jira`) via keyring. Never put credentials in files or print them.
+- Python 3.12+ via the Windows launcher: always `py -X utf8 scripts/<script> ...` (`-X utf8` because of Cyrillic in data). Dependencies: `requirements.txt`. Setup for a new user: `README.md`.
+- Bulk `get_cases` crashes the server (PHP memory) → sync fetches per section.
+
+## Scripts (`scripts/`)
+- `sync.py` — refresh `data/index.jsonl` (~38k cases, ~870 sections, few minutes). Run before each analysis if last sync (`data/sync_state.json`) is older than a day.
+- `jira_issue.py <KEY|URL>` — summary, description, components, links, comments.
+- `search.py "<group>" "<group>" [--path RE] [--full] [--title-only] [--all]` — all groups must match, `|` = OR inside group. Obsolete folders (DEPRECATED, NOT IMPLEMENTED YET, DRAFT, to delete, [TBD]) skipped by default.
+- `search.py ... --by-section` — only match counts per folder; use it first for wide passes, then `--path` into the relevant folders (avoids huge outputs).
+- `show.py C123 C456 [--max N]` — full preconditions/steps/expected of given cases.
+- `create_run.py --name "<KEY> <summary>" --cases-file runs/<KEY>.txt [--yes]` — dry run without `--yes`.
+- `create_cases.py runs/<KEY>.new.json [--yes] [--add-to-run <RUN_ID>]` — create new cases from drafts (format in the script docstring); dry run without `--yes`. Writes created IDs back into the JSON (re-run never duplicates) and appends them to the local index.
+- Run read-only scripts (`search.py`, `show.py`, `jira_issue.py`, `sync.py`) via the Bash tool exactly as `py -X utf8 scripts/<script> ...` from the project root — this prefix is pre-allowed in `.claude/settings.json`, so no permission prompt. Scripts that change TestRail (`create_run.py`, `create_cases.py`) are intentionally not pre-allowed.
+- Temporary helper scripts/outputs go to the scratchpad, never into the project.
+
+## Workflow per impact
+1. `jira_issue.py` → the run is built from the **Impact_Ekran** field (`customfield_14800`), NOT from the bug description. Description/comments only help to understand the area. If Impact_Ekran is empty — ask the user for the impact.
+2. Several `search.py` passes: the impacted behavior with synonyms (e.g. "cannot edit" ≈ "view only" ≈ "only Details tab available" ≈ "disabled"), the role/permission, adjacent tabs/flows, platform (MT / PACM / agents). Use `--title-only` for wide passes. Recently updated cases in the feature folder are often written for this very change.
+3. Indirect cases count: a case that would catch the problem even if it doesn't describe it literally is a valid P1.
+4. Cover the opposite side too: if a restriction was added for one role, include cases that other roles still CAN do it, role transitions, and that the restricted role can still use the feature.
+5. Propose tiers with a one-line reason per case:
+   - P1 — covers the impact (directly or indirectly); P2 — surrounding/dependent flows and other roles; P3 — still-works checks / smoke.
+   - Gaps — scenarios with no case (suggest titles). Duplicates — keep one, list the others. Suspected outdated cases (contradict the new behavior).
+   - Keep the run lean: one case per distinct check. Drop a case when another selected case already covers it (e.g. "PAM user sees only Details tab" covers per-tab "cannot edit" cases; an end-to-end install case covers "valid file accepted"; an Editor case covers the Owner one). Drop cases about unaffected behavior (e.g. .ini size/content when only file-name validation changed) and cases marked as moved/outdated.
+6. Save chosen IDs to `runs/<KEY>.txt`, show dry run, create with `--yes` only after explicit user OK.
+7. Run name = Jira key + summary. Several tickets can go into one run if the user asks — then one combined `runs/<NAME>.txt` and all impacts in the description.
+8. Gaps → draft new cases in `runs/<KEY>.new.json`, show them (dry run of `create_cases.py`), create with `--yes` only after explicit user OK, then add to the run with `--add-to-run`.
+
+## Rules for new cases
+- Only create new cases. Never edit, move or delete existing cases (outdated ones are only reported to the user).
+- Put each case into the existing folder that fits by meaning (look where the neighbouring cases live, e.g. via `search.py --by-section`). Never create new folders.
+- Prefer end-to-end cases. No redundant cases: skip a gap if an existing case already covers it (e.g. "invalid file is rejected" covers wrong-extension variants). Variants (upper/lower case, user types, session types, etc.) go into one case's preconditions/ER, not into separate cases.
+- Everything in English. Copy the wording of the neighbouring cases in that folder (same area prefix, e.g. "MT - Client Management - Install clients - ...", "PAM - Permissions - ...", "Web Player - ...").
+- One title style everywhere: "<Area> - <precondition> - <steps> - Check that <expected result>". Always "Check that ...", never "-->" even if old neighbours use it.
+- The title alone must be readable without opening the case: it contains the precondition, the steps and the expected result ("... - Check that ..."), max 250 chars (`create_cases.py` enforces it).
+- Complex cases additionally get preconditions, numbered steps and expected result in the body; the title still stays short and clear. Text template, type Manual, refs = Jira key.
+- If the expected behavior is not certain from the ticket, say so to the user when showing the draft.
+
+## Notes
+- "Tests from tickets" and "Acceptance" folders duplicate many feature-folder cases — prefer the feature-folder case unless Acceptance is the newer one.
+- Communicate with the user in Russian; give exact step-by-step instructions for anything they do manually.
