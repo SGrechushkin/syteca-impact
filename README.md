@@ -1,91 +1,64 @@
 # Syteca impact → TestRail run
 
-Подбирает тест-кейсы TestRail под импакт задачи из Jira (поле **Impact_Ekran**) и создаёт тест-ран.
-Работает через Claude Code в VS Code: вы пишете `/impact AC-12345`, Claude находит кейсы, предлагает тиры P1/P2/P3,
-непокрытые сценарии (и новые кейсы для них), а после вашего «ок» создаёт ран в TestRail.
+Пишете в Claude Code `/impact AC-12345` → Claude читає поле **Impact_Ekran** у Jira, підбирає кейси в TestRail (P1/P2/P3), показує дублі, застарілі кейси й непокриті сценарії (з чернетками нових кейсів) → після вашого «ок» створює ран і дає посилання.
 
-Проект TestRail: **AI: CSM2** (project 9, suite 13 "Master").
+TestRail: проєкт **AI: CSM2** (project 9, suite 13 "Master").
 
-## Установка (один раз)
+## Встановлення (один раз, ~10 хв)
 
-1. **Python 3.12+**
-   - Скачайте установщик с https://www.python.org/downloads/windows/ и запустите.
-   - В первом окне отметьте **"Add python.exe to PATH"** → **Install Now**.
-   - Проверка: откройте PowerShell и выполните `py --version` — должно вывести `Python 3.12.x` или новее.
-
-2. **VS Code + Claude Code**
-   - В VS Code: слева иконка **Extensions** (Ctrl+Shift+X) → найдите **Claude Code** (издатель Anthropic) → **Install**.
-   - Войдите в свой аккаунт Claude, когда расширение попросит.
-
-3. **Скачать проект**
-   - В PowerShell перейдите в папку, где храните проекты, и выполните:
-     ```
-     git clone <ссылка на репозиторий в Bitbucket>
-     cd syteca-impact
-     ```
-
-4. **Библиотеки Python** (в папке проекта):
+1. **Python 3.12+** — https://www.python.org/downloads/windows/ → у першому вікні інсталятора відмітьте **Add python.exe to PATH**.
+   Перевірка: `py --version`
+2. **VS Code → Extensions (Ctrl+Shift+X) → Claude Code** (Anthropic) → Install → увійдіть у свій акаунт Claude.
+3. **Проєкт і бібліотеки** (PowerShell, у папці, де зберігаєте проєкти):
    ```
+   git clone https://jira.dev.local/bitbucket/scm/~viktor.kustovskyi/syteca-impact.git
+   cd syteca-impact
    py -m pip install -r requirements.txt
    ```
-
-5. **Ваши логины к TestRail и Jira**
-   Логин и пароль сохраняются в Диспетчер учётных данных Windows — в файлы проекта они не попадают.
+4. **Логіни TestRail і Jira** — зберігаються в Диспетчері облікових даних Windows, не у файлах:
    ```
    py -X utf8 scripts/set_credentials.py testrail
    py -X utf8 scripts/set_credentials.py jira
    ```
-   Введите логин и пароль (пароль при вводе не отображается — это нормально).
-
-6. **Проверка подключения**
+5. **Перевірка й перше завантаження кейсів** (~38 000 кейсів, кілька хвилин):
    ```
    py -X utf8 scripts/check_connection.py
-   ```
-   Должно вывести `Project 9: AI: CSM2` и `Suite 13: Master`.
-
-7. **Первая загрузка кейсов** (несколько минут, ~38 000 кейсов)
-   ```
    py -X utf8 scripts/sync.py
    ```
-   Дальше Claude сам обновляет базу, если ей больше суток.
+   Має вивести `Project 9: AI: CSM2` і `Suite 13: Master`. Далі Claude сам оновлює базу, якщо їй більше доби.
 
-## Как пользоваться
+## Використання
 
-1. Откройте папку `syteca-impact` в VS Code: **File → Open Folder**.
-2. Откройте панель Claude Code (иконка Claude справа вверху или Ctrl+Esc).
-3. Напишите:
+1. VS Code → **File → Open Folder** → `syteca-impact` → відкрийте панель Claude Code.
+2. Напишіть:
    ```
    /impact https://jira.dev.local/jira/browse/AC-12345
    ```
-   Можно несколько тикетов сразу и своё название рана: `/impact AC-1 AC-2 — один ран, назови его "ETR-1 - regression"`.
-4. Claude покажет кейсы по тирам, дубли, устаревшие кейсы и черновики новых кейсов для непокрытых сценариев.
-   Поправьте, что нужно, обычными словами («убери избыточные», «объедини в один end-to-end кейс»).
-5. Напишите **«ок»** — только после этого Claude создаёт ран / новые кейсы в TestRail и даёт ссылку.
+   Кілька тікетів в один ран зі своєю назвою: `/impact AC-1 AC-2 — один ран, назва "ETR-1 - regression"`
+3. Правте звичайними словами: «прибери надлишкові», «об'єднай в один end-to-end кейс», «додай кейс на ...».
+4. **«ок»** — лише після цього Claude створює ран / нові кейси в TestRail.
 
-## Правила, которым следует Claude
+Оновлення проєкту: `git pull` у папці проєкту.
 
-Записаны в `CLAUDE.md` (общие для всей команды — если меняете, делайте это через pull request):
-- ран строится по полю **Impact_Ekran**, а не по описанию бага;
-- в ране нет избыточных кейсов: один кейс на одну проверку;
-- новые кейсы — только в существующие папки по смыслу, на английском, в стиле соседних кейсов,
-  тайтл `<Area> - <precondition> - <steps> - Check that ...` (до 250 символов), end-to-end, варианты — в ER;
-- существующие кейсы никогда не редактируются и не удаляются;
-- ничего не создаётся в TestRail без вашего явного «ок».
+## Правила (`CLAUDE.md`, спільні для команди — змінюйте через pull request)
 
-## Что не попадает в репозиторий
+- Ран будується за полем **Impact_Ekran**, а не за описом бага.
+- Без надлишкових кейсів: один кейс — одна перевірка.
+- Нові кейси: тільки в наявні папки за змістом, англійською, у стилі сусідніх кейсів, end-to-end, варіанти — в ER.
+  Тайтл: `<Area> - <precondition> - <steps> - Check that ...` (до 250 символів).
+- Наявні кейси ніколи не редагуються й не видаляються.
+- Нічого не створюється в TestRail без вашого явного «ок».
 
-- `data/` — локальная копия кейсов (создаётся `sync.py`, ~60 MB);
-- `runs/` — ваши личные списки ранов и черновики кейсов;
-- `.claude/settings.local.json` — ваши личные настройки Claude Code;
-- логины и пароли — только в Диспетчере учётных данных Windows.
+## Що не потрапляє в репозиторій
 
-## Если что-то не работает
+`data/` (локальна копія кейсів, ~60 MB), `runs/` (ваші списки ранів і чернетки), `.claude/settings.local.json`, логіни/паролі.
 
-| Ошибка | Что делать |
+## Якщо не працює
+
+| Помилка | Рішення |
 |---|---|
-| `'py' is not recognized` | Переустановите Python с галочкой "Add python.exe to PATH" |
-| `No module named 'keyring'` / `'requests'` | `py -m pip install -r requirements.txt` |
-| `No credentials ... syteca-testrail` | `py -X utf8 scripts/set_credentials.py testrail` |
-| `HTTP 401` | Неверный логин/пароль — повторите `set_credentials.py` |
-| `SSL: CERTIFICATE_VERIFY_FAILED` | Убедитесь, что установлен `truststore` (входит в requirements.txt) и вы в корпоративной сети/VPN |
-| TestRail отвечает таймаутом / HTTP 500 при создании кейсов | Повторите ту же команду — скрипт сам найдёт уже созданные кейсы и не сделает дублей |
+| `'py' is not recognized` | Перевстановіть Python з **Add python.exe to PATH** |
+| `No module named ...` | `py -m pip install -r requirements.txt` |
+| `No credentials ... syteca-testrail` / `HTTP 401` | `py -X utf8 scripts/set_credentials.py testrail` (або `jira`) |
+| `CERTIFICATE_VERIFY_FAILED` | Перевірте VPN / корпоративну мережу і що встановлено `truststore` |
+| Таймаут / HTTP 500 при створенні кейсів | Повторіть ту саму команду — скрипт знайде вже створені кейси, дублів не буде |

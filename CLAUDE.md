@@ -45,4 +45,5 @@ User sends a Jira ticket (link/key) or impact text → pick TestRail cases that 
 
 ## Notes
 - "Tests from tickets" and "Acceptance" folders duplicate many feature-folder cases — prefer the feature-folder case unless Acceptance is the newer one.
+- README.md (for colleagues) is in Ukrainian.
 - Communicate with the user in Russian; give exact step-by-step instructions for anything they do manually.
