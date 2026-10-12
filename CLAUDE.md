@@ -15,7 +15,9 @@ User sends a Jira ticket (link/key) or impact text → pick TestRail cases that 
 - `search.py "<group>" "<group>" [--path RE] [--full] [--title-only] [--all]` — all groups must match, `|` = OR inside group. Obsolete folders (DEPRECATED, NOT IMPLEMENTED YET, DRAFT, to delete, [TBD]) skipped by default.
 - `search.py ... --by-section` — only match counts per folder; use it first for wide passes, then `--path` into the relevant folders (avoids huge outputs).
 - `show.py C123 C456 [--max N]` — full preconditions/steps/expected of given cases.
+- `run_cases.py <RUN_ID|URL> [--ids-only]` — list cases of an existing run (read-only). Use only when the user points to a run (e.g. "take the PACM cases from run X"); don't browse other runs on your own.
 - `create_run.py --name "<KEY> <summary>" --cases-file runs/<KEY>.txt [--yes]` — dry run without `--yes`.
+- `create_run.py --update-run <RUN_ID> --cases-file runs/<KEY>.txt [--yes]` — set the exact case list of an existing run; dry run shows removed/added cases and warns if removed ones already have results.
 - `create_cases.py runs/<KEY>.new.json [--yes] [--add-to-run <RUN_ID>]` — create new cases from drafts (format in the script docstring); dry run without `--yes`. Writes created IDs back into the JSON (re-run never duplicates) and appends them to the local index.
 - Run read-only scripts (`search.py`, `show.py`, `jira_issue.py`, `sync.py`) via the Bash tool exactly as `py -X utf8 scripts/<script> ...` from the project root — this prefix is pre-allowed in `.claude/settings.json`, so no permission prompt. Scripts that change TestRail (`create_run.py`, `create_cases.py`) are intentionally not pre-allowed.
 - Temporary helper scripts/outputs go to the scratchpad, never into the project.
@@ -45,5 +47,7 @@ User sends a Jira ticket (link/key) or impact text → pick TestRail cases that 
 
 ## Notes
 - "Tests from tickets" and "Acceptance" folders duplicate many feature-folder cases — prefer the feature-folder case unless Acceptance is the newer one.
+- "PACM / launch secrets" in an impact means all 3 ways: local Connection Manager on the Win agent (Jump Server, "PAM / Ekran System Connection Manager"), and Web Connection Manager in MT — "Launch locally" and "Launch in browser" ("PAM - Web Connection Manager ..." folders).
+- Agent packaging changes (e.g. DLL signing) do not impact "Windows Client / Compatibility with antiviruses" — don't include it.
 - README.md (for colleagues) is in Ukrainian.
 - Communicate with the user in Russian; give exact step-by-step instructions for anything they do manually.
