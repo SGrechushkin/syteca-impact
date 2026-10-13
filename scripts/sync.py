@@ -1,18 +1,28 @@
-"""Download all sections and cases of the suite into data/.
+"""Download sections and cases of the suite into data/.
+
+Incremental by default: refetches all sections and only the cases updated since the last sync (seconds).
+Full sync (few minutes) with --full, when there is no local data yet, or when the last full sync is older
+than FULL_EVERY_DAYS - only a full sync drops deleted cases.
 
 Output:
     data/sections.json   raw sections
     data/cases.json      raw cases
     data/index.jsonl     one flattened case per line (id, path, title, priority, text) - used for analysis
+
+Usage:
+    py -X utf8 scripts/sync.py [--full]
 """
+import argparse
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from tr_client import PROJECT_ID, SUITE_ID, TestRail
 
 DATA = Path(__file__).resolve().parent.parent / "data"
+FULL_EVERY_DAYS = 7
+OVERLAP = timedelta(hours=1)  # re-read a bit before the last sync to tolerate clock differences
 
 
 def clean(text):
@@ -50,11 +60,12 @@ def section_paths(sections):
     return {sid: path(sid) for sid in by_id}
 
 
-def main():
-    tr = TestRail()
-    DATA.mkdir(exist_ok=True)
+def load_state():
+    path = DATA / "sync_state.json"
+    return json.loads(path.read_text("utf-8")) if path.exists() else {}
 
-    sections = tr.get_all(f"get_sections/{PROJECT_ID}&suite_id={SUITE_ID}", "sections")
+
+def full_fetch(tr, sections):
     # Bulk get_cases exhausts server memory on this instance - fetch section by section instead
     cases = []
     for i, s in enumerate(sections, 1):
@@ -62,6 +73,35 @@ def main():
             f"get_cases/{PROJECT_ID}&suite_id={SUITE_ID}&section_id={s['id']}", "cases"))
         print(f"\r{i}/{len(sections)} sections, {len(cases)} cases", end="", flush=True)
     print()
+    return cases
+
+
+def incremental_fetch(tr, since):
+    # updated_after keeps the result small, so the suite-wide call is safe here
+    old = {c["id"]: c for c in json.loads((DATA / "cases.json").read_text("utf-8"))}
+    ts = int((datetime.fromisoformat(since) - OVERLAP).timestamp())
+    changed = tr.get_all(f"get_cases/{PROJECT_ID}&suite_id={SUITE_ID}&updated_after={ts}", "cases")
+    new = sum(c["id"] not in old for c in changed)
+    old.update({c["id"]: c for c in changed})
+    print(f"{len(changed)} cases changed since {since} ({new} new)")
+    return list(old.values())
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--full", action="store_true", help="refetch every section (drops deleted cases)")
+    args = ap.parse_args()
+
+    tr = TestRail()
+    DATA.mkdir(exist_ok=True)
+    state = load_state()
+    started = datetime.now().isoformat(timespec="seconds")
+    last_full = state.get("full_synced_at") or state.get("synced_at")
+    full = (args.full or not (DATA / "cases.json").exists() or not last_full
+            or datetime.now() - datetime.fromisoformat(last_full) > timedelta(days=FULL_EVERY_DAYS))
+
+    sections = tr.get_all(f"get_sections/{PROJECT_ID}&suite_id={SUITE_ID}", "sections")
+    cases = full_fetch(tr, sections) if full else incremental_fetch(tr, state["synced_at"])
     priorities = {p["id"]: p["name"] for p in tr.get("get_priorities")}
     paths = section_paths(sections)
 
@@ -84,10 +124,10 @@ def main():
                 if c.get("updated_on") else None,
             }, ensure_ascii=False) + "\n")
 
-    state = {"synced_at": datetime.now().isoformat(timespec="seconds"),
+    state = {"synced_at": started, "full_synced_at": started if full else last_full,
              "sections": len(sections), "cases": len(cases)}
     (DATA / "sync_state.json").write_text(json.dumps(state, indent=1), "utf-8")
-    print(f"Synced {len(cases)} cases in {len(sections)} sections -> {DATA}")
+    print(f"{'Full' if full else 'Incremental'} sync: {len(cases)} cases in {len(sections)} sections -> {DATA}")
 
 
 if __name__ == "__main__":

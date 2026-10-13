@@ -10,12 +10,13 @@ User sends a Jira ticket (link/key), impact text or an impact `.md` file → pic
 - Bulk `get_cases` crashes the server (PHP memory) → sync fetches per section.
 
 ## Scripts (`scripts/`)
-- `sync.py` — refresh `data/index.jsonl` (~38k cases, ~870 sections, few minutes). Run before each analysis if last sync (`data/sync_state.json`) is older than a day.
+- `sync.py [--full]` — refresh `data/index.jsonl` (~38k cases, ~870 sections). Incremental by default (only cases changed since the last sync, seconds); full refetch (few minutes) with `--full` or automatically once a week — only a full sync drops deleted cases. Run it at the start of every analysis and whenever a case is "not in local index".
 - `jira_issue.py <KEY|URL>` — summary, description, components, links, comments.
-- `search.py "<group>" "<group>" [--path RE] [--full] [--title-only] [--all]` — all groups must match, `|` = OR inside group. Obsolete folders (DEPRECATED, NOT IMPLEMENTED YET, DRAFT, to delete, [TBD]) skipped by default.
+- `search.py "<group>" "<group>" [--path RE] [--full] [--title-only] [--all]` — all groups must match, `|` = OR inside group. Obsolete folders (DEPRECATED, NOT IMPLEMENTED YET, to delete, To remove, [TBD], "PEDM / DEL") skipped by default. DRAFT folders are searched: their cases may be not reviewed yet — mark them as draft in the proposal tables.
 - `search.py ... --by-section` — only match counts per folder; use it first for wide passes, then `--path` into the relevant folders (avoids huge outputs).
 - `show.py C123 C456 [--max N]` — full preconditions/steps/expected of given cases.
 - `run_cases.py <RUN_ID|URL> [--ids-only]` — list cases of an existing run (read-only). Use only when the user points to a run (e.g. "take the PACM cases from run X"); don't browse other runs on your own.
+- `run_cases.py <RUN_ID> --compare runs/<NAME>.txt` — what the user added/removed in the run compared to the proposed list (+ created cases from `runs/<NAME>.new.json`).
 - `create_run.py --name "<KEY> <summary>" --cases-file runs/<KEY>.txt [--yes]` — dry run without `--yes`.
 - `create_run.py --update-run <RUN_ID> --cases-file runs/<KEY>.txt [--yes]` — set the exact case list of an existing run; dry run shows removed/added cases and warns if removed ones already have results.
 - `create_cases.py runs/<KEY>.new.json [--yes] [--add-to-run <RUN_ID>]` — create new cases from drafts (format in the script docstring); dry run without `--yes`. Writes created IDs back into the JSON (re-run never duplicates) and appends them to the local index.
@@ -40,6 +41,8 @@ User sends a Jira ticket (link/key), impact text or an impact `.md` file → pic
 6. Save chosen IDs to `runs/<KEY>.txt`, show dry run, create with `--yes` only after explicit user OK.
 7. Run name = Jira key + summary. Several tickets can go into one run if the user asks — then one combined `runs/<NAME>.txt` and all impacts in the description.
 8. Gaps → draft new cases in `runs/<KEY>.new.json`, show them (dry run of `create_cases.py`), create with `--yes` only after explicit user OK, then add to the run with `--add-to-run`.
+9. Ask during the process whenever something is unclear instead of guessing — e.g. the impact covers several independent areas (agent connection / PACM / PEDM): list them and ask which ones to cover before searching; the expected behavior of a new case is ambiguous; it's unclear whether a scenario belongs to the impact.
+10. The user says they edited the run after it was built → `sync.py`, then `run_cases.py <RUN_ID> --compare runs/<NAME>.txt`. Group the differences (removed by user / added existing / created new), give the conclusion per group, ask about the ones whose reason is not obvious, then propose rule updates for this file and write them only after the user's OK.
 
 ## Rules for new cases
 - Only create new cases. Never edit, move or delete existing cases (outdated ones are only reported to the user).
@@ -49,9 +52,10 @@ User sends a Jira ticket (link/key), impact text or an impact `.md` file → pic
 - One title style everywhere: "<Area> - <precondition> - <steps> - Check that <expected result>". Always "Check that ...", never "-->" even if old neighbours use it.
 - The title alone must be readable without opening the case: it contains the precondition, the steps and the expected result ("... - Check that ..."), max 250 chars (`create_cases.py` enforces it).
 - Complex cases additionally get preconditions, numbered steps and expected result in the body; the title still stays short and clear. Text template, type Manual, refs = Jira key.
-- If the expected behavior is not certain from the ticket, say so to the user when showing the draft.
+- If the expected behavior is not certain from the ticket, ask the user about it when showing the draft (before creating). Add the "[not sure about ER]" title prefix only when the user says they are not sure either.
 
 ## Notes
+- "PEDM / MT (refactored)" is the current PEDM MT folder (optimized copy of "PEDM / MT", which is kept but not maintained) — prefer refactored; take from "PEDM / MT" only cases that have no refactored counterpart (e.g. new cases added there).
 - "Tests from tickets" and "Acceptance" folders duplicate many feature-folder cases — prefer the feature-folder case unless Acceptance is the newer one.
 - "PACM / launch secrets" in an impact means all 3 ways: local Connection Manager on the Win agent (Jump Server, "PAM / Ekran System Connection Manager"), and Web Connection Manager in MT — "Launch locally" and "Launch in browser" ("PAM - Web Connection Manager ..." folders).
 - "PAM ↔ agent service" (e.g. "Конект PAM з агентським сервісом, локальний і web PAM") in an impact means PACM — all 3 ways above.

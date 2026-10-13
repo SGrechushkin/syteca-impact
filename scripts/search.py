@@ -2,7 +2,8 @@
 
 Each argument is a term group; a case matches when EVERY group matches.
 Inside a group, alternatives are separated by "|" (regex, case-insensitive).
-Obsolete folders (DEPRECATED, NOT IMPLEMENTED YET, DRAFT, to delete) are skipped unless --all.
+Obsolete folders (DEPRECATED, NOT IMPLEMENTED YET, to delete, To remove, PEDM / DEL) are skipped unless --all.
+DRAFT folders are searched (possibly not reviewed yet).
 
 Usage:
     py -X utf8 scripts/search.py "secret" "permission|PAM User"
@@ -16,7 +17,7 @@ from collections import Counter
 from pathlib import Path
 
 INDEX = Path(__file__).resolve().parent.parent / "data" / "index.jsonl"
-OBSOLETE = re.compile(r"DEPRECATED|DELETED|NOT IMPLEMENTED YET|DRAFT|to delete|\[TBD\]", re.I)
+OBSOLETE = re.compile(r"DEPRECATED|DELETED|NOT IMPLEMENTED YET|to delete|To remove|\[TBD\]|(^|/ )DEL( /|$)", re.I)
 
 
 def main():
@@ -26,7 +27,7 @@ def main():
     ap.add_argument("--title-only", action="store_true", help="match terms against title only")
     ap.add_argument("--all", action="store_true", help="include obsolete folders")
     ap.add_argument("--full", action="store_true", help="print preconditions/steps/expected")
-    ap.add_argument("--limit", type=int, default=200)
+    ap.add_argument("--limit", type=int, default=0, help="max cases to print (default: all)")
     ap.add_argument("--by-section", action="store_true",
                     help="print only match counts per section (narrow down with --path afterwards)")
     args = ap.parse_args()
@@ -52,13 +53,14 @@ def main():
         print(f"\n{len(hits)} matches")
         return
 
-    for c in hits[: args.limit]:
+    shown = hits[: args.limit] if args.limit else hits
+    for c in shown:
         print(f"C{c['id']} [{c['priority']}] ({c['updated_on']}) {c['path']}\n    {c['title']}")
         if args.full:
             for k in ("preconditions", "steps", "expected"):
                 if c[k]:
                     print(f"    {k.upper()}: {c[k][:600]}")
-    print(f"\n{len(hits)} matches" + (f" (showing {args.limit})" if len(hits) > args.limit else ""))
+    print(f"\n{len(hits)} matches" + (f" (showing {len(shown)})" if len(shown) < len(hits) else ""))
 
 
 if __name__ == "__main__":
