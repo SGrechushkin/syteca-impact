@@ -3,10 +3,10 @@
 Dry run by default - prints what would be created. Add --yes to actually create.
 Created IDs are written back into the drafts file ("id"), so a re-run never duplicates a case.
 New cases are appended to data/index.jsonl so search.py finds them before the next sync.
+References (refs) are always left empty - a "refs" key in the drafts is ignored.
 
 Drafts file (runs/<KEY>.new.json):
     {
-      "refs": "AC-61577",                       # default refs for every case
       "cases": [
         {
           "section": "PAM / Permissions",       # full section path (as search.py prints it) or section id
@@ -110,7 +110,6 @@ def main():
                 "template_id": TEXT_TEMPLATE_ID,
                 "type_id": ctype,
                 "priority_id": prio,
-                "refs": c.get("refs", doc.get("refs", "")),
                 "custom_preconds": c.get("preconditions", ""),
                 "custom_steps": c.get("steps", ""),
                 "custom_expected": c.get("expected", ""),
@@ -145,7 +144,7 @@ def main():
                 "id": case_id, "path": sections[id(c)][1], "title": c["title"],
                 "priority": c.get("priority", "Medium"), "preconditions": payload["custom_preconds"],
                 "steps": payload["custom_steps"], "expected": payload["custom_expected"],
-                "refs": payload["refs"], "updated_on": date.today().isoformat(),
+                "updated_on": date.today().isoformat(),
             }, ensure_ascii=False) + "\n")
 
     if args.add_to_run:

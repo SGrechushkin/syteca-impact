@@ -51,7 +51,7 @@ User sends a Jira ticket (link/key), impact text or an impact `.md` file → pic
 - Everything in English. Copy the wording of the neighbouring cases in that folder (same area prefix, e.g. "MT - Client Management - Install clients - ...", "PAM - Permissions - ...", "Web Player - ...").
 - One title style everywhere: "<Area> - <precondition> - <steps> - Check that <expected result>". Always "Check that ...", never "-->" even if old neighbours use it.
 - The title alone must be readable without opening the case: it contains the precondition, the steps and the expected result ("... - Check that ..."), max 250 chars (`create_cases.py` enforces it).
-- Complex cases additionally get preconditions, numbered steps and expected result in the body; the title still stays short and clear. Text template, type Manual, refs = Jira key.
+- Complex cases additionally get preconditions, numbered steps and expected result in the body; the title still stays short and clear. Text template, type Manual. Leave References (refs) empty — never put the Jira key there.
 - If the expected behavior is not certain from the ticket, ask the user about it when showing the draft (before creating). Add the "[not sure about ER]" title prefix only when the user says they are not sure either.
 
 ## Notes
