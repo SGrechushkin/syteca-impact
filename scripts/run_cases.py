@@ -70,8 +70,8 @@ def main():
 
 def load_proposed(cases_file):
     """Case IDs from runs/<NAME>.txt (comments skipped) plus created cases from runs/<NAME>.new.json."""
-    text = "\n".join(l for l in cases_file.read_text("utf-8").splitlines() if not l.lstrip().startswith("#"))
-    ids = [int(i) for i in re.findall(r"C?(\d+)", text)]
+    text = "\n".join(l.split("#", 1)[0] for l in cases_file.read_text("utf-8").splitlines())
+    ids = [int(i) for i in re.findall(r"\bC?(\d+)\b", text)]
     drafts = cases_file.with_suffix(".new.json")
     if drafts.exists():
         ids += [c["id"] for c in json.loads(drafts.read_text("utf-8"))["cases"] if c.get("id")]
