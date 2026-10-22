@@ -66,7 +66,7 @@ Regression is already done for the release; pre-sending re-checks installers/upd
    - Per risk area: the cases from the tickets' "Link to test rail case" field first (written for that very fix), then core-functionality cases of the area (main positive flows — e.g. PEDM Auto-elevate / Require approval / Deny), then cases for every 🔴/🟠 unstated-impact item, incl. the opposite side (roles that must keep access, Owner still sees full data).
    - Not taken: UI-only / localization / cosmetic tickets and specific license configs already checked in regression; Sonar/test/doc tickets. List them with the reason.
    - Missing coverage: if an existing case almost covers it, write "add step X to C123" in the report (cases are never edited); otherwise draft a new case (Rules for new cases).
-5. Report (in the user's language), in this order: 1. Scope by team version; 2. Unstated impact; 3. Pre-sending run — 3.1 base (mandatory + additions), then one table per area: ID | Section | What it checks | Ticket, with notes for extra steps and gaps under each table; 4. Consciously not taken. Save the report to `runs/presending-<version>.md`, the IDs with area comments to `runs/presending-<version>.txt`.
+5. Report (in Ukrainian), in this order: 1. Scope by team version; 2. Unstated impact; 3. Pre-sending run — grouped by TestRail section in the order the run shows them ("Hot_fixes- Pre-sending" first, then "Tests from tickets", "Acceptance / ...", "PAM / Permissions", "PEDM / MT", ...). Per section: the tickets and their Impact_Ekran quote (or the unstated-impact item) that made the section needed, then a table ID | What it checks | Ticket | Impact / reason, with extra steps ("Дод. крок") and gaps in the reason column or under the table; 4. Consciously not taken. Save the report to `runs/presending-<version>.md`, the IDs with area comments to `runs/presending-<version>.txt`.
 6. Dry run of `create_run.py`; create only after explicit OK. Name "Pre-sending testing <version>", description: the ETR ticket link if the user gave it, plus the Jira issues link of the scope.
 7. After the user edits the run — same as workflow per impact step 10.
 
@@ -87,4 +87,4 @@ Regression is already done for the release; pre-sending re-checks installers/upd
 - "PAM ↔ agent service" (e.g. "Конект PAM з агентським сервісом, локальний і web PAM") in an impact means PACM — all 3 ways above.
 - Agent packaging changes (e.g. DLL signing) do not impact "Windows Client / Compatibility with antiviruses" — don't include it.
 - README.md (for colleagues) is in Ukrainian.
-- Communicate with the user in Russian; give exact step-by-step instructions for anything they do manually.
+- Communicate with the user in Ukrainian (always, incl. reports in `runs/`); give exact step-by-step instructions for anything they do manually.
