@@ -4,6 +4,7 @@
       "Bash(py -X utf8 scripts/search.py:*)",
       "Bash(py -X utf8 scripts/show.py:*)",
       "Bash(py -X utf8 scripts/jira_issue.py:*)",
+      "Bash(py -X utf8 scripts/jira_search.py:*)",
       "Bash(py -X utf8 scripts/sync.py:*)",
       "Bash(py -X utf8 scripts/run_cases.py:*)"
     ]
